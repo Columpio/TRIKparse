@@ -142,6 +142,14 @@ def collectHeaders(trikRuntimeRoot):
     return includes, parsed_files
 
 
+def collectDirs(files):
+    return {os.path.dirname(file.name) for file in files}
+
+
+def collectIncludes(files):
+    return {os.path.basename(file.name) for file in files}
+
+
 def dumpToFile(root, filename='parsed.pickle', force=True):
     if not os.access(filename, os.F_OK) or force:
         with open(filename, 'wb') as file:
