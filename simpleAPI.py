@@ -43,9 +43,11 @@ class Enum(Entry):
 
 
 class File(object):
-    def __init__(self, name, scope):
+    def __init__(self, name, scope, local_includes, global_includes):
         self.name = name
         self.scope = scope
+        self.local_includes  = local_includes
+        self.global_includes = global_includes
 
     def __repr__(self):
         return "[File %s: %d entries in global scope]" % (self.name, len(self.scope))

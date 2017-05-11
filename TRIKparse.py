@@ -1,4 +1,5 @@
 from __future__ import print_function
+from itertools import chain
 import pickle
 import re
 import os
@@ -17,7 +18,7 @@ DEBUG = reduce(lambda x, y: x * y, map(int, '3'.split()))
 
 
 class _regexps:
-    nontrivial_include = re.compile(r"#include\s+<(?P<INCLUDE_NAME>[^>]*)>")
+    nontrivial_include = re.compile(r"#include\s+(?P<INCLUDE_NAME>[\"<].+[\">])")
 
     # Garbage
     multiline_comment = re.compile("/\*.*\*/", flags=re.DOTALL)
@@ -97,8 +98,17 @@ def parseScope(text):
     return entries | set(parseRawScope(text[prev_end:]))
 
 
-def collectNontrivialIncludes(text):
-    return [incl.group('INCLUDE_NAME') for incl in _regexps.nontrivial_include.finditer(text)]
+def collectIncludesFromText(text):
+    all_includes = {incl.group('INCLUDE_NAME') for incl in _regexps.nontrivial_include.finditer(text)}
+
+    local_includes, global_includes = set(), set()
+    for include in all_includes:
+        if include[0] == '"':
+            local_includes.add(include[1:-1])
+        else:
+            global_includes.add(include[1:-1])
+
+    return local_includes, global_includes
 
 
 def parseFile(filename):
@@ -110,7 +120,7 @@ def parseFile(filename):
     with open(filename) as file:
         text = file.read()
 
-    INCLUDES = collectNontrivialIncludes(text)
+    local_includes, global_includes = collectIncludesFromText(text)
 
     text = _regexps.remove_by_re(text,
                                  # Remove comments, pragmas, \-carry, strings
@@ -127,22 +137,23 @@ def parseFile(filename):
 
     SCOPE = parseScope(text)
 
-    return INCLUDES, File(filename, SCOPE)
+    return File(filename, SCOPE, local_includes, global_includes)
+
+
+def isHeaderExt(ext):
+    return ext in ('.h', '.hpp')
 
 
 def collectHeaders(trikRuntimeRoot):
     # TODO: handle ~/trikRuntime
 
     parsed_files = set()
-    includes = set()
     for root, _, files in os.walk(trikRuntimeRoot):
         for filename in files:
-            if filename.endswith(".h"):  # like: os.path.splitext(filename)[1] == '.h'
-                incls, file = parseFile(os.path.join(root, filename))
-                includes |= set(incls)
-                parsed_files.add(file)
+            if isHeaderExt(os.path.splitext(filename)[1]):
+                parsed_files.add(parseFile(os.path.join(root, filename)))
 
-    return includes, parsed_files
+    return parsed_files
 
 
 def collectDirs(files):
@@ -162,20 +173,34 @@ def dumpToFile(root, filename='parsed.pickle', force=True):
 def generateH(qt_includes, our_includes, force=True):
     if not os.access(OUT_INCLUDES_PATH, os.F_OK) or force:
         with open(OUT_INCLUDES_PATH, 'w') as file:
-            file.write('\n'.join(["#include <%s>" % include for include in qt_includes]))
+            file.write('\n'.join("#include <%s>" % include for include in sorted(qt_includes)))
             file.write('\n\n')
-            file.write('\n'.join(['#include "%s"' % include for include in our_includes]))
+            file.write('\n'.join('#include "%s"' % include for include in sorted(our_includes)))
+
+
+def checkIncludes(files, global_includes):
+    for file in files:
+        for include in file.global_includes:
+            if 'trik' in include.lower():
+                print("WARNING: `#include <{0}>` in {1}".format(include, file.name))
+            include_name, ext = os.path.splitext(include)
+            if isHeaderExt(ext) and include_name in global_includes:
+                print("WARNING: `#include <{0}>` is `#include <{2}>`? in {1}".format(include, file.name, include_name))
 
 
 def main(root):
-    qt_includes, files = collectHeaders(root)
+    files = collectHeaders(root)
 
     include_dirs = collectDirs(files)
     with open(OUT_INCLUDE_DIRS_PATH, 'w') as file:
         file.write('\n'.join(include_dirs))
 
     our_includes = collectIncludes(files)
-    generateH(qt_includes, our_includes, force=False)
+    global_includes = set(chain.from_iterable(file.global_includes for file in files))
+
+    checkIncludes(files, global_includes)
+
+    generateH(global_includes, our_includes, force=True)
 
 
 if __name__ == "__main__":
