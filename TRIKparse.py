@@ -6,6 +6,9 @@ import os.path
 from simpleAPI import *
 
 
+OUT_INCLUDES_PATH = "out/trikPythonIncludes.h"
+OUT_INCLUDE_DIRS_PATH = "out/include_dirs.txt"
+
 DEBUG = reduce(lambda x, y: x * y, map(int, '3'.split()))
 """
 2 - use test_cpp_features.h
@@ -156,5 +159,24 @@ def dumpToFile(root, filename='parsed.pickle', force=True):
             pickle.dump((root, collectHeaders(root)), file)
 
 
+def generateH(qt_includes, our_includes, force=True):
+    if not os.access(OUT_INCLUDES_PATH, os.F_OK) or force:
+        with open(OUT_INCLUDES_PATH, 'w') as file:
+            file.write('\n'.join(["#include <%s>" % include for include in qt_includes]))
+            file.write('\n\n')
+            file.write('\n'.join(['#include "%s"' % include for include in our_includes]))
+
+
+def main(root):
+    qt_includes, files = collectHeaders(root)
+
+    include_dirs = collectDirs(files)
+    with open(OUT_INCLUDE_DIRS_PATH, 'w') as file:
+        file.write('\n'.join(include_dirs))
+
+    our_includes = collectIncludes(files)
+    generateH(qt_includes, our_includes, force=False)
+
+
 if __name__ == "__main__":
-    dumpToFile("/home/columpio/myTRIKStudio/src/trikRuntime/", 'parsed.pickle')
+    main("/home/columpio/myTRIKStudio/src/trikRuntime/")
