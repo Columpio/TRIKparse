@@ -142,9 +142,10 @@ def collectHeaders(trikRuntimeRoot):
     return includes, parsed_files
 
 
-def dumpToFile(root, filename='parsed.pickle'):
-    with open(filename, 'wb') as file:
-        pickle.dump((root, collectHeaders(root)), file)
+def dumpToFile(root, filename='parsed.pickle', force=True):
+    if not os.access(filename, os.F_OK) or force:
+        with open(filename, 'wb') as file:
+            pickle.dump((root, collectHeaders(root)), file)
 
 
 if __name__ == "__main__":
