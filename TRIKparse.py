@@ -33,10 +33,10 @@ def collectIncludes(files):
     return {os.path.basename(file.name) for file in files}
 
 
-def dumpToFile(root, filename='parsed.pickle', force=True):
+def dumpToFile(root, files, filename='parsed.pickle', force=True):
     if not os.access(filename, os.F_OK) or force:
         with open(filename, 'wb') as file:
-            pickle.dump((root, collectHeaders(root)), file)
+            pickle.dump((root, files), file)
 
 
 def generateH(qt_includes, our_includes, force=True):
