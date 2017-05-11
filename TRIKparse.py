@@ -8,7 +8,7 @@ from simpleAPI import *
 
 DEBUG = reduce(lambda x, y: x * y, map(int, '3'.split()))
 """
-2 - use test_cpp_features.cpp
+2 - use test_cpp_features.h
 3 - remove \n
 """
 
@@ -102,7 +102,7 @@ def parseFile(filename):
     # TODO: templates?
 
     if not DEBUG % 2:
-        filename = "test_cpp_features.cpp"
+        filename = "test_cpp_features.h"
 
     with open(filename) as file:
         text = file.read()
