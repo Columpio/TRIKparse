@@ -55,9 +55,9 @@ class File(object):
 
 def loadFromFile(filename="parsed.pickle"):
     with open(filename, 'rb') as file:
-        (root, (includes, files)) = pickle.load(file)
+        (root, files) = pickle.load(file)
 
-    return root, includes, files
+    return root, files
 
 
 if __name__ == '__main__':
