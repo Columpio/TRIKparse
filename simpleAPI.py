@@ -51,7 +51,7 @@ class File(object):
         return "[File %s: %d entries in global scope]" % (self.name, len(self.scope))
 
 
-def loadFromFile(filename):
+def loadFromFile(filename="parsed.pickle"):
     with open(filename, 'rb') as file:
         (root, (includes, files)) = pickle.load(file)
 
@@ -59,4 +59,4 @@ def loadFromFile(filename):
 
 
 if __name__ == '__main__':
-    root, _, _ = loadFromFile("parsed.pickle")
+    loadFromFile("parsed.pickle")
