@@ -49,6 +49,9 @@ def generateDirs(files, force=False):
     if not os.access(OUT_INCLUDE_DIRS_PATH, os.F_OK) or force:
         with open(OUT_INCLUDE_DIRS_PATH, 'w') as file:
             file.write('\n'.join(include_dirs))
+        print("SUCCESS: include directories file generated at: %s" % OUT_INCLUDE_DIRS_PATH)
+    else:
+        print("INFO: include directories file generation skipped")
 
 
 def generateH(qt_includes, our_includes, force=False):
@@ -57,6 +60,9 @@ def generateH(qt_includes, our_includes, force=False):
             file.write('\n'.join("#include <%s>" % include for include in sorted(qt_includes)))
             file.write('\n\n')
             file.write('\n'.join('#include "%s"' % include for include in sorted(our_includes)))
+        print("SUCCESS: .h file generated at: %s" % OUT_INCLUDES_PATH)
+    else:
+        print("INFO: .h file generation skipped")
 
 
 class XMLBuilder(object):
@@ -93,6 +99,9 @@ def generateXML(files, force=False):
     if not os.access(OUT_XML_PATH, os.F_OK) or force:
         with open(OUT_XML_PATH, 'w') as file:
             file.write(builder.build())
+        print("SUCCESS: .xml file generated at: %s" % OUT_XML_PATH)
+    else:
+        print("INFO: .xml file generation skipped")
 
 
 def checkIncludes(files, global_includes):
