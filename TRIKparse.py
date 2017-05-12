@@ -5,6 +5,8 @@ import os.path
 
 from parseCPP import *
 
+
+# Constants
 OUT_INCLUDES_PATH = "out/trikPythonIncludes.h"
 OUT_INCLUDE_DIRS_PATH = "out/include_dirs.txt"
 
@@ -33,13 +35,20 @@ def collectIncludes(files):
     return {os.path.basename(file.name) for file in files}
 
 
-def dumpToFile(root, files, filename='parsed.pickle', force=True):
+def dumpToFile(root, files, filename='parsed.pickle', force=False):
     if not os.access(filename, os.F_OK) or force:
         with open(filename, 'wb') as file:
             pickle.dump((root, files), file)
 
 
-def generateH(qt_includes, our_includes, force=True):
+def generateDirs(files, force=False):
+    include_dirs = collectDirs(files)
+    if not os.access(OUT_INCLUDE_DIRS_PATH, os.F_OK) or force:
+        with open(OUT_INCLUDE_DIRS_PATH, 'w') as file:
+            file.write('\n'.join(include_dirs))
+
+
+def generateH(qt_includes, our_includes, force=False):
     if not os.access(OUT_INCLUDES_PATH, os.F_OK) or force:
         with open(OUT_INCLUDES_PATH, 'w') as file:
             file.write('\n'.join("#include <%s>" % include for include in sorted(qt_includes)))
@@ -60,16 +69,13 @@ def checkIncludes(files, global_includes):
 def main(root):
     files = collectHeaders(root)
 
-    include_dirs = collectDirs(files)
-    with open(OUT_INCLUDE_DIRS_PATH, 'w') as file:
-        file.write('\n'.join(include_dirs))
-
     our_includes = collectIncludes(files)
     global_includes = set(chain.from_iterable(file.global_includes for file in files))
 
     checkIncludes(files, global_includes)
 
-    generateH(global_includes, our_includes, force=True)
+    generateDirs(files)
+    generateH(global_includes, our_includes)
 
 
 if __name__ == "__main__":
