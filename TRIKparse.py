@@ -115,16 +115,20 @@ def checkIncludes(files, global_includes):
 
 
 def main(root):
+    print("INFO: HEADER COLLECTING STARTED")
     files = collectHeaders(root)
+    print("INFO: HEADER COLLECTING FINISHED")
 
     our_includes = collectIncludes(files)
     global_includes = set(chain.from_iterable(file.global_includes for file in files))
 
     checkIncludes(files, global_includes)
 
+    print('\nINFO: FILE GENERATING STARTED')
     generateDirs(files)
     generateH(global_includes, our_includes)
     generateXML(files)
+    print('INFO: FILE GENERATING FINISHED')
 
 
 if __name__ == "__main__":
