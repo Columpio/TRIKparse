@@ -30,7 +30,8 @@ class Class(Entry):
     def __init__(self, name):
         super(Class, self).__init__(name)
 
-        self.isInterface = 'interface' in name.lower()
+    def isInterface(self):
+        return 'interface' in self.name.lower()
 
     @staticmethod
     def typename():
@@ -43,11 +44,11 @@ class Enum(Entry):
 
 
 class File(object):
-    def __init__(self, name, scope, local_includes, global_includes):
+    def __init__(self, name, scope, local_includes=None, global_includes=None):
         self.name = name
         self.scope = scope
-        self.local_includes  = local_includes
-        self.global_includes = global_includes
+        self.local_includes  = local_includes  or set()
+        self.global_includes = global_includes or set()
 
     def __repr__(self):
         return "[File %s: %d entries in global scope]" % (self.name, len(self.scope))
