@@ -61,6 +61,17 @@ collectCodeBlocks = metaCollectBlocks('{', '}')
 collectTypeBlocks = metaCollectBlocks('<', '>')  # typeblock is `<class Tuple, typename T, int k>`
 
 
+def addMaxDeclaration(d, entry):
+    if len(d.setdefault(entry.name, entry)) < len(entry):
+        d[entry.name] = entry
+
+
+def setFirstMaxUnion(d1, d2):
+    for name in d2:
+        addMaxDeclaration(d1, d2[name])
+    return d1
+
+
 def clearClassName(name):
     return name.split(':')[0].strip()  # remove inheritance and spaces
 
@@ -98,42 +109,42 @@ def removeTemplates(text):
 def parsePlainScope(text):
     need_parse_next_block, text = removeTemplates(text)
 
-    entries = set()
+    entries = {}
 
     if not need_parse_next_block:  # template was before {}, so just collect plain names
         for type_with_junk in _regexps.inlined.finditer(text):
             entry_type = _regexps.type_names[type_with_junk.group('TYPE_NAME')]
             name = clearClassName(type_with_junk.group('INST_NAME'))
-            entries.add(entry_type(name))
+            addMaxDeclaration(entries, entry_type(name))
         return None, entries  # == <it was template before {}>, collected entries
 
-    last_entry = None
+    last_entry = Entry(None)
     last_end = -1
     for type_with_junk in _regexps.inlined.finditer(text):
         last_end = type_with_junk.end()  # so we could know if we really have LAST declaration before {}
         entry_type = _regexps.type_names[type_with_junk.group('TYPE_NAME')]
         name = clearClassName(type_with_junk.group('INST_NAME'))
-        entries.add(last_entry)
+        addMaxDeclaration(entries, last_entry)
         last_entry = entry_type(name)
 
     if last_entry:
-        entries.remove(None)  # if we entered `for` loop, we put `None`
+        entries.pop(None)  # if we entered `for` loop, we put `Entry(None)`
         if not _regexps.extra_declaration.search(text[last_end:]):  # our declaration is the last
-            return last_entry, entries  # TODO: dupls?
+            return last_entry, entries
 
-        entries.add(last_entry)  # if our decl is not last then it is equal to others
+        addMaxDeclaration(entries, last_entry)  # if our decl is not last then it is equal to others
 
     return None, entries
 
 
 def parseScope(text):
-    entries = set()
+    entries = {}
     prev_end = 0
     for (start, fin) in collectCodeBlocks(text):
         raw_scope_and_current_name = text[prev_end:start]
         # parse before {}
         main_entry, new_entries = parsePlainScope(raw_scope_and_current_name)
-        entries |= new_entries  # TODO: dupls?
+        setFirstMaxUnion(entries, new_entries)
 
         prev_end = fin
         if not main_entry:  # not a valid class, namespace,.. (sth like: `int main() {..}` -- not class decl)
@@ -141,12 +152,13 @@ def parseScope(text):
 
         # parse inside {}
         main_entry.nested = parseScope(text[start+1:fin-1])
-        entries.add(main_entry)
+        addMaxDeclaration(entries, main_entry)
 
     last_entry, new_entries = parsePlainScope(text[prev_end:])
     if last_entry:
-        new_entries.add(last_entry)
-    return entries | new_entries
+        addMaxDeclaration(new_entries, last_entry)
+
+    return set(setFirstMaxUnion(entries, new_entries).itervalues())
 
 
 def collectIncludesFromText(text):

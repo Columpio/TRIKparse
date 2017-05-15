@@ -12,6 +12,12 @@ class Entry(object):
             self.name = name
         self.nested = set()
 
+    def __nonzero__(self):
+        return self.name is not None
+
+    def __len__(self):
+        return len(self.nested)
+
     def __repr__(self):
         if self.nested:
             return "[%s %s : %s]" % (self.__class__.__name__, self.name, self.nested)
