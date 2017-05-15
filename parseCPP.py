@@ -13,6 +13,11 @@ class _regexps:
     _string = lambda c: r"((?<!\\){}.*?(?<!\\){})".format(c, c)
     string = re.compile('|'.join([_string("\""), _string("\'")]))
 
+    # Templates
+    template = re.compile(r"\btemplate\b")
+    template_typeblock_start = re.compile(r"\s*<")
+    name_of_template_class = re.compile(r"^\s*\b%s[^;]+" % Class.typename())
+
     friend_class = re.compile(r"\bfriend\s+class\s")
 
     # Raw declarations, like `enum x;`, no even `class a {};`
@@ -57,6 +62,36 @@ collectTypeBlocks = metaCollectBlocks('<', '>')  # typeblock is `<class Tuple, t
 
 def clearClassName(name):
     return name.split(':')[0].strip()  # remove inheritance and spaces
+
+
+def removeTemplates(text):
+    def skipTypeBlock(fragment):
+        """ returns fragment without starting TypeBlock
+            TypeBlock is something like `<class Tuple, typename T, int k>` """
+        _, typeblock_end = next(collectTypeBlocks(fragment))  # should not be empty
+        fragment = fragment[typeblock_end:]  # skip typeblock (see `collectTypeBlocks`)
+        return fragment
+
+    template_match = _regexps.template.search(text)
+
+    new_text = []
+    while True:
+        if not template_match:
+            new_text.append(text)
+            return True, ''.join(new_text)  # text ends with NOT template declaration
+
+        (start, fin) = template_match.span()
+        new_text.append(text[:start])  # template-free code
+
+        text = text[fin:]  # skip: `template <> struct ..` -> ` <> struct ..`
+        if _regexps.template_typeblock_start.match(text):  # if starts with `  <` (so typeblock)
+            text = skipTypeBlock(text)
+        text = _regexps.name_of_template_class.sub('', text, count=1)  # `struct Name; sth` -> `; sth`
+
+        if not text:
+            return False, ''.join(new_text)  # text ends with template declaration
+
+        template_match = _regexps.template.search(text)  # loop
 
 
 def parseRawScope(text):
