@@ -13,7 +13,7 @@ class _regexps:
     _string = lambda c: r"((?<!\\){}.*?(?<!\\){})".format(c, c)
     string = re.compile('|'.join([_string("\""), _string("\'")]))
 
-    friend_class = re.compile(r"^.*\sfriend\s+class\s+.*$", flags=re.MULTILINE)
+    friend_class = re.compile(r"\bfriend\s+class\s")
 
     # Raw declarations, like `enum x;`, no even `class a {};`
     type_names = {
