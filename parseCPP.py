@@ -34,17 +34,24 @@ class _regexps:
         return text
 
 
-def getBlocks(text):
-    s = 0
-    for m in re.finditer("[{}]", text):
-        if m.group() == '{':
+def metaCollectBlocks(opened, closed):
+    block_re = re.compile("[%s%s]" % (opened, closed))
+
+    def collectBlocks(text):
+        s = 0
+        for m in block_re.finditer(text):
+            if m.group() == opened:
+                if s == 0:
+                    start = m.start()
+                s += 1
+            else:
+                s -= 1
             if s == 0:
-                start = m.start()
-            s += 1
-        else:
-            s -= 1
-        if s == 0:
-            yield (start, m.end())
+                yield (start, m.end())
+
+    return collectBlocks
+
+collectCodeBlocks = metaCollectBlocks('{', '}')
 
 
 def clearClassName(name):
@@ -61,14 +68,11 @@ def parseRawScope(text):
     return entries
 
 
-def parseScope(text):
-    blocks = list(getBlocks(text))
-    if not blocks:
-        return parseRawScope(text)
 
+def parseScope(text):
     entries = set()
     prev_end = 0
-    for (start, fin) in blocks:
+    for (start, fin) in collectCodeBlocks(text):
         raw_scope_and_current_name = text[prev_end:start]
         new_entries = parseRawScope(raw_scope_and_current_name)
         if not new_entries:
