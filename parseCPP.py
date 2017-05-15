@@ -146,7 +146,7 @@ def parseScope(text):
     last_entry, new_entries = parsePlainScope(text[prev_end:])
     if last_entry:
         new_entries.add(last_entry)
-    return removeDuplicates(entries | new_entries)
+    return entries | new_entries
 
 
 def collectIncludesFromText(text):
