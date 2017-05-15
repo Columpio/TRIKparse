@@ -12,6 +12,7 @@ class _regexps:
     comment_or_pragma = re.compile(r"(//|#).*$", flags=re.MULTILINE)
     _string = lambda c: r"((?<!\\){}.*?(?<!\\){})".format(c, c)
     string = re.compile('|'.join([_string("\""), _string("\'")]))
+    extra_declaration = re.compile(r";\s*\S")
 
     # Templates
     template = re.compile(r"\btemplate\b")
@@ -94,15 +95,35 @@ def removeTemplates(text):
         template_match = _regexps.template.search(text)  # loop
 
 
-def parseRawScope(text):
-    entries = []
+def parsePlainScope(text):
+    need_parse_next_block, text = removeTemplates(text)
+
+    entries = set()
+
+    if not need_parse_next_block:  # template was before {}, so just collect plain names
+        for type_with_junk in _regexps.inlined.finditer(text):
+            entry_type = _regexps.type_names[type_with_junk.group('TYPE_NAME')]
+            name = clearClassName(type_with_junk.group('INST_NAME'))
+            entries.add(entry_type(name))
+        return None, entries  # == <it was template before {}>, collected entries
+
+    last_entry = None
+    last_end = -1
     for type_with_junk in _regexps.inlined.finditer(text):
+        last_end = type_with_junk.end()  # so we could know if we really have LAST declaration before {}
         entry_type = _regexps.type_names[type_with_junk.group('TYPE_NAME')]
         name = clearClassName(type_with_junk.group('INST_NAME'))
-        entries.append(entry_type(name))
+        entries.add(last_entry)
+        last_entry = entry_type(name)
 
-    return entries
+    if last_entry:
+        entries.remove(None)  # if we entered `for` loop, we put `None`
+        if not _regexps.extra_declaration.search(text[last_end:]):  # our declaration is the last
+            return last_entry, entries  # TODO: dupls?
 
+        entries.add(last_entry)  # if our decl is not last then it is equal to others
+
+    return None, entries
 
 
 def parseScope(text):
@@ -110,18 +131,22 @@ def parseScope(text):
     prev_end = 0
     for (start, fin) in collectCodeBlocks(text):
         raw_scope_and_current_name = text[prev_end:start]
-        new_entries = parseRawScope(raw_scope_and_current_name)
-        if not new_entries:
-            continue
-        main_entry = new_entries[-1]
-        new_entries = set(new_entries[:-1])
-        entries |= new_entries
+        # parse before {}
+        main_entry, new_entries = parsePlainScope(raw_scope_and_current_name)
+        entries |= new_entries  # TODO: dupls?
 
+        prev_end = fin
+        if not main_entry:  # not a valid class, namespace,.. (sth like: `int main() {..}` -- not class decl)
+            continue
+
+        # parse inside {}
         main_entry.nested = parseScope(text[start+1:fin-1])
         entries.add(main_entry)
 
-        prev_end = fin
-    return entries | set(parseRawScope(text[prev_end:]))
+    last_entry, new_entries = parsePlainScope(text[prev_end:])
+    if last_entry:
+        new_entries.add(last_entry)
+    return removeDuplicates(entries | new_entries)
 
 
 def collectIncludesFromText(text):
