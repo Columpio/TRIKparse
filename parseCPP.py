@@ -52,6 +52,7 @@ def metaCollectBlocks(opened, closed):
     return collectBlocks
 
 collectCodeBlocks = metaCollectBlocks('{', '}')
+collectTypeBlocks = metaCollectBlocks('<', '>')  # typeblock is `<class Tuple, typename T, int k>`
 
 
 def clearClassName(name):
