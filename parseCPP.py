@@ -4,7 +4,7 @@ from simpleAPI import *
 
 
 class _regexps:
-    nontrivial_include = re.compile(r"#include\s+(?P<INCLUDE_NAME>[\"<].+[\">])")
+    include = re.compile(r"#include\s+(?P<INCLUDE_NAME>[\"<].+[\">])")
 
     # Garbage
     multiline_comment = re.compile("/\*.*\*/", flags=re.DOTALL)
@@ -22,8 +22,8 @@ class _regexps:
         "class": Class,
         "enum": Enum
     }
-    inlined = re.compile(r"\b(?P<TYPE_NAME>%s)\s(?P<INST_NAME>[^;]*)" % '|'.join(
-        [Type.typename()for Type in type_names.values()]))
+    inlined = re.compile(r"\b(?P<TYPE_NAME>%s)\s(?P<INST_NAME>[^;]*)" %
+                         '|'.join(Type.typename() for Type in type_names.values()))
 
     @staticmethod
     def remove_by_re(text, *REs):
@@ -85,7 +85,7 @@ def parseScope(text):
 
 
 def collectIncludesFromText(text):
-    all_includes = {incl.group('INCLUDE_NAME') for incl in _regexps.nontrivial_include.finditer(text)}
+    all_includes = {incl.group('INCLUDE_NAME') for incl in _regexps.include.finditer(text)}
 
     local_includes, global_includes = set(), set()
     for include in all_includes:
