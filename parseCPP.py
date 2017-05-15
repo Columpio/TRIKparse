@@ -163,8 +163,6 @@ def collectIncludesFromText(text):
 
 
 def parseFile(filename):
-    # TODO: templates?
-
     with open(filename) as file:
         text = file.read()
 
