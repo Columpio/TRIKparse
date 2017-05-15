@@ -14,7 +14,7 @@ class Entry(object):
 
     def __repr__(self):
         if self.nested:
-            return "[%s %s : size = %d]" % (self.__class__.__name__, self.name, len(self.nested))
+            return "[%s %s : %s]" % (self.__class__.__name__, self.name, str(self.nested))
         else:
             return "[%s %s]" % (self.__class__.__name__, self.name)
 
