@@ -58,7 +58,19 @@ def metaCollectBlocks(opened, closed):
     return collectBlocks
 
 collectCodeBlocks = metaCollectBlocks('{', '}')
-collectTypeBlocks = metaCollectBlocks('<', '>')  # typeblock is `<class Tuple, typename T, int k>`
+
+def collectTypeBlock(text):
+    """typeblock is `<class Tuple, typename T, int k>`"""
+    s = 0
+    for m in re.finditer(r'[<>]', text):
+        if m.group() == '<':
+            if s == 0:
+                start = m.start()
+            s += 1
+        else:
+            s -= 1
+        if s == 0:
+            yield (start, m.end())
 
 
 def addMaxDeclaration(d, entry):
@@ -80,7 +92,7 @@ def removeTemplates(text):
     def skipTypeBlock(fragment):
         """ returns fragment without starting TypeBlock
             TypeBlock is something like `<class Tuple, typename T, int k>` """
-        _, typeblock_end = next(collectTypeBlocks(fragment))  # should not be empty
+        _, typeblock_end = next(collectTypeBlock(fragment))  # should not be empty
         fragment = fragment[typeblock_end:]  # skip typeblock (see `collectTypeBlocks`)
         return fragment
 
