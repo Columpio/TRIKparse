@@ -49,7 +49,7 @@ def generateDirs(files, force=False):
     include_dirs = collectDirs(files)
     if not os.access(OUT_INCLUDE_DIRS_PATH, os.F_OK) or force:
         with open(OUT_INCLUDE_DIRS_PATH, 'w') as file:
-            file.write('\n'.join(include_dirs))
+            file.write('\n'.join(sorted(include_dirs)))
         print("SUCCESS: include directories file generated at: %s" % OUT_INCLUDE_DIRS_PATH)
     else:
         print("INFO: include directories file generation skipped")
