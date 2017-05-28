@@ -166,6 +166,7 @@ def parseScope(text):
         main_entry.nested = parseScope(text[start+1:fin-1])
         addMaxDeclaration(entries, main_entry)
 
+    # parse after last {}
     last_entry, new_entries = parsePlainScope(text[prev_end:])
     if last_entry:
         addMaxDeclaration(new_entries, last_entry)
