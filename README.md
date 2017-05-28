@@ -16,27 +16,22 @@ namespace NS {
     }
 }
 ```   
-myscript.py:
+REPL:
 ```
-from parseCPP import *
-form TRIKparse import *
-
-parsed_files = collectHeaders("folder")
-
-print(parsed_files)
-myfile = parsed_files.pop()
-print(myfile.global_includes)
-print(myfile.scope)
-ns = myfile.scope.pop()
-print(ns.nested)
-a = ns.nested.pop()
-print(a.nested)
-```
-output:
-```
-set([[File test_cpp_features.h: 1 entries in global scope]])
+>>> from parseCPP import *
+>>> from TRIKparse import *
+>>> parsed_files = collectHeaders("folder")
+>>> parsed_files
+set([[File folder/sth.h: 1 entries in global scope]])
+>>> myfile = parsed_files.pop()
+>>> myfile.global_includes
 set(['QCore', 'QString'])
-set([[Namespace NS : size = 1]])
-set([[Class A : size = 1]])
+>>> myfile.scope
+set([[Namespace NS : set([[Class A : set([[Class B]])]])]])
+>>> ns = myfile.scope.pop()
+>>> ns.nested
+set([[Class A : set([[Class B]])]])
+>>> a = ns.nested.pop()
+>>> a.nested
 set([[Class B]])
 ```
