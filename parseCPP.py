@@ -40,24 +40,30 @@ class _regexps:
         return text
 
 
-def metaCollectBlocks(opened, closed):
-    block_re = re.compile("[%s%s]" % (opened, closed))
+def collectCodeBlocks(text):
+    def deep_structure(blocks, start=0, fin=float("inf")):
+        out = {}
+        while blocks:
+            block = blocks[-1]
+            (b_st, b_fin) = block
+            if start <= b_st and b_fin < fin:  # block is inside us
+                blocks.pop()  # remove it and inspect it's structure
+                out[(b_st-start, b_fin-start)] = deep_structure(blocks, b_st, b_fin)
+            else:  # block is our neighbour
+                return out
+        return out
 
-    def collectBlocks(text):
-        s = 0
-        for m in block_re.finditer(text):
-            if m.group() == opened:
-                if s == 0:
-                    start = m.start()
-                s += 1
-            else:
-                s -= 1
-            if s == 0:
-                yield (start, m.end())
+    # "{{}{}}" ~> [(1, 3), (3, 5), (0, 6)] (indexes of beginnings and ends of scopes)
+    blocks = []
+    stack = []
+    for m in re.finditer(r'[{}]', text):
+        if m.group() == '{':
+            stack.append(m.start())
+        else:
+            blocks.append((stack.pop(), m.end()))
 
-    return collectBlocks
+    return deep_structure(sorted(blocks, reverse=True))  # return nested structure
 
-collectCodeBlocks = metaCollectBlocks('{', '}')
 
 def collectTypeBlock(text):
     """typeblock is `<class Tuple, typename T, int k>`"""
@@ -149,10 +155,11 @@ def parsePlainScope(text):
     return None, entries
 
 
-def parseScope(text):
+def parseScope(text, codeBlocks):
     entries = {}
     prev_end = 0
-    for (start, fin) in collectCodeBlocks(text):
+    for codeBlock in sorted(codeBlocks.keys()):
+        (start, fin) = codeBlock
         raw_scope_and_current_name = text[prev_end:start]
         # parse before {}
         main_entry, new_entries = parsePlainScope(raw_scope_and_current_name)
@@ -163,7 +170,7 @@ def parseScope(text):
             continue
 
         # parse inside {}
-        main_entry.nested = parseScope(text[start+1:fin-1])
+        main_entry.nested = parseScope(text[start:fin], codeBlocks[codeBlock])
         addMaxDeclaration(entries, main_entry)
 
     # parse after last {}
@@ -203,6 +210,7 @@ def parseFile(filename):
                                  _regexps.friend_class
                                  )
 
-    SCOPE = parseScope(text)
+    codeBlocks = collectCodeBlocks(text)
+    SCOPE = parseScope(text, codeBlocks)
 
     return File(filename, SCOPE, local_includes, global_includes)
